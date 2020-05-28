@@ -1,123 +1,226 @@
 #pragma once
 #include <cmath>
-#include <stdlib.h>
-#define M_PI 3.1415926536
+#include <ctime>
 
+#include "happy.h"
 
-struct Vec {        
-	double x, y, z;                  
-	Vec(double x_ = 0, double y_ = 0, double z_ = 0) { 
-		x = x_; 
-		y = y_; 
-		z = z_; 
+typedef unsigned int UINT;
+#define PI 3.1415926
+#define EPSILON (10e-7)
+
+struct Config {
+	UINT WIDTH;
+	UINT HEIGHT;
+	UINT SSP;
+	UINT THREAD;
+	Config() {
+		WIDTH = 480;
+		HEIGHT = 480;
+		SSP = 100;
+		THREAD = 1;
 	}
-
-	Vec operator+(const Vec& b) const { 
-		return Vec(x + b.x, y + b.y, z + b.z); 
-	}
-
-	Vec operator-(const Vec& b) const { 
-		return Vec(x - b.x, y - b.y, z - b.z); 
-	}
-
-	Vec operator*(double b) const { 
-		return Vec(x * b, y * b, z * b); 
-	}
-
-	Vec mult(const Vec& b) const { 
-		return Vec(x * b.x, y * b.y, z * b.z); 
-	}
-
-	Vec& norm() { 
-		return *this = *this * (1 / sqrt(x * x + y * y + z * z)); 
-	}
-
-	double dot(const Vec& b) const { 
-		return x * b.x + y * b.y + z * b.z; 
-	} 
-	// cross: 
-	Vec operator%(Vec& b) { 
-		return Vec(y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x);
+	Config(UINT w, UINT h, UINT s, UINT t) {
+		WIDTH = w;
+		HEIGHT = h;
+		SSP = s;
+		THREAD = t;
 	}
 };
 
-struct Ray { 
-	Vec o, d; 
-	Ray(const Vec& o_, const Vec& d_) : o(o_), d(d_) {}
-};
-
-enum Refl_t { DIFF, SPEC, REFR };
-
-struct Sphere {
-	double rad;       // radius 
-	Vec p, e, c;      // position, emission, color 
-	Refl_t refl;      // reflection type (DIFFuse, SPECular, REFRactive) 
-	Sphere(double rad_, Vec p_, Vec e_, Vec c_, Refl_t refl_) :
-		rad(rad_), p(p_), e(e_), c(c_), refl(refl_) {}
-	double intersect(const Ray& r) const { // returns distance, 0 if nohit 
-		Vec op = p - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0 
-		double t, eps = 1e-4, b = op.dot(r.d), det = b * b - op.dot(op) + rad * rad;
-		if (det < 0) return 0; else det = sqrt(det);
-		return (t = b - det) > eps ? t : ((t = b + det) > eps ? t : 0);
+template <class T>
+struct Vec2 {
+	T x;
+	T y;
+	Vec2() {
+		x = static_cast<T>(0);
+		y = static_cast<T>(0);;
+	}
+	Vec2(const T& _x, const T& _y){
+		x = _x;
+		y = _y;
 	}
 };
+
+
+template <class T>
+struct Vec3 {
+	T x;
+	T y;
+	T z;
+	Vec3() {
+		x = static_cast<T>(0);
+		y = static_cast<T>(0);
+		z = static_cast<T>(0);
+	}
+	Vec3(const T& _x, const T& _y, const T& _z) {
+		x = _x;
+		y = _y;
+		z = _z;
+	}	
+
+	bool Parallel(const Vec3<double>& v) const{
+		auto mul = (*this).OuterProd(v);
+		if (abs(mul.x) < EPSILON && abs(mul.y) < EPSILON && abs(mul.z) < EPSILON)
+			return true;
+		else
+			return false;
+	}
+
+	 Vec3<T>& normalize() {
+		double norm = static_cast<double>(sqrt(x * x + y * y + z * z));
+		x = static_cast<double>(x / norm);
+		y = static_cast<double>(y / norm);
+		z = static_cast<double>(z / norm);
+
+		return *this;
+	}
+	T dot(const Vec3<T>& anotherVec) const{
+		return x * anotherVec.x + y * anotherVec.y + z * anotherVec.z;
+	}
+
+	 Vec3<T> OuterProd(const Vec3<T>& v2) const {
+		return Vec3<T>(y * v2.z - v2.y * z, v2.x * z - x * v2.z, x * v2.y - v2.x * y);
+	}
+
+	T length() const{
+		return sqrt(x * x + y * y + z * z);
+	}
+
+	friend  Vec3<T> operator *(T para, const Vec3<T>& v2) {
+		return Vec3<T>(para * v2.x, para * v2.y, para * v2.z);
+	}
+
+	friend  Vec3<T> operator +(const Vec3<T>& v1, const Vec3<T>& v2) {
+		return Vec3<T>(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+	}
+
+	friend  Vec3<T> operator -(const Vec3<T>& v1, const Vec3<T>& v2) {
+		return Vec3<T>(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+	}
+
+	friend  Vec3<T> operator *(const Vec3<T>& v1, const Vec3<T>& v2) {
+		return Vec3<T>(v1.x * v2.x, v1.y*v2.y, v1.z*v2.z);
+	}
+};
+
+typedef Vec3<double> Color;
+typedef Vec3<double> Point;
+typedef UINT Mat;
+
+inline double distance(const Vec3<double>& p1, const Vec3<double>& p2) {
+	return (p1 - p2).length();
+}
 
 inline double clamp(double x) { return x < 0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x) { return int(pow(clamp(x), 1 / 2.2) * 255 + .5); }
-inline bool intersect(const std::vector<Sphere>& spheres, const Ray& r, double& t, int& id) {
-	double numSph = spheres.size();
-	double distance;
-	double inf = t = 1e20;
-	for (int i = 0; i < numSph;  i++) {                            // find the closest one that intersect happened
-		if ((distance = spheres[i].intersect(r)) && distance < t) {
-			t = distance;
-			id = i; 
-		}
+
+inline double cos2sin(double cosValue) {
+	//assert(cosValue >= 0);
+	return sqrt(1 - cosValue * cosValue);
+}
+inline double sin2cos(double sinValue) {
+	//assert(sinValue >= 0);
+	return sqrt(1 - sinValue * sinValue);
+}
+
+inline double SampleRandomNumOverride(double start, double end, UINT seed) {
+	//std::srand(seed*(unsigned)time(0));
+	return (double)rand() / RAND_MAX * (end - start) + start;
+}
+
+inline double SampleRandomNum(double start, double end) {
+	//std::srand((unsigned)time(0));
+	return (double)rand() / RAND_MAX * (end - start) + start;
+}
+/*
+inline Vec3<double> SampleOnSemiSphere(const Vec3<double>& normal) {
+	//std::srand((unsigned)time(0));
+	//double phi = (double)rand() / RAND_MAX * PI / 2;
+
+	//std::srand((unsigned)time(0));
+	//double theta = (double)rand() / RAND_MAX * PI * 2;
+
+	double r1 = 2 * PI * SampleRandomNum(0, 1.0f);
+	double r2 = SampleRandomNum(0, 1.0f);
+	double r2s = sqrt(r2);
+	Vec3<double> w = normal;
+	Vec3<double> u = ( (fabs(w.x) > .1 ? Vec3<double>(0, 1, 0) : Vec3<double>(1, 0, 0)).OuterProd( w )  ).normalize();
+	auto v = w.OuterProd(u);
+	Vec3<double> d = (cos(r1) * r2s * u + sin(r1) * r2s * v + sqrt(1 - r2) * w).normalize();
+
+	return d;
+}
+*/
+inline void resetRandomGen() {
+	std::srand((unsigned)time(0));
+}
+
+
+inline Vec3<double> SampleOnSemiSphere(const Vec3<double>& normal) {
+	int index = 0;
+	while (true) {
+		index++;
+		double phi = SampleRandomNum(0.0, PI);
+		double theta = SampleRandomNum(0.0, 2 * PI);
+		Vec3<double> d(sin(phi)*cos(theta), sin(phi)*sin(theta),cos(phi));
+		if (d.dot(normal) >= 0)
+		return d;
 	}
 
-	return t < inf;
+
+}
+inline Vec3<double> SampleScatterDir() {
+	double phi = SampleRandomNum(0.0, PI);
+	double theta = SampleRandomNum(0.0, 2 * PI);
+	Vec3<double> d(sin(phi) * cos(theta), sin(phi) * sin(theta), cos(phi));
+	return d;
 }
 
-double erand48(unsigned short xsubi[3]) {
-	return (double)rand() / (double)RAND_MAX;
-}
+enum MatType {
+	Matt,
+	Specular,
+	Glass,
+	Emission
+};
 
-Vec radiance(const std::vector<Sphere>& spheres, const Ray& r, int depth, unsigned short* Xi) {
-	double t;                               // distance to intersection 
-	int id = 0;                               // id of intersected object 
-	if (!intersect(spheres, r, t, id))
-		return Vec(); // if miss, return black 
-	const Sphere& obj = spheres[id];        // the hit object 
+struct Photon {
+	Vec3<double> position;
+	Vec3<double> spectrum;
+	Vec3<double> direction;
 
-	Vec x = r.o + r.d * t, n = (x - obj.p).norm();
-	Vec nl = n.dot(r.d) < 0 ? n : n * -1;
-	Vec f = obj.c;
+};
 
-	double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl 
 
-	if (++depth > 5) 
-		if (erand48(Xi) < p) f = f * (1 / p);
-	else return obj.e; //R.R. 
+inline void LoadMeshFromFile(const std::string& path, std::vector<Vec3<size_t>>& face, std::vector<Point>& vert, std::vector<Point>& norms) {
 
-	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection 
-		double r1 = 2 * M_PI * erand48(Xi), r2 = erand48(Xi), r2s = sqrt(r2);
-		Vec w = nl, u = ((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)) % w).norm(), v = w % u;
-		Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
-		return obj.e + f.mult(radiance(spheres, Ray(x, d), depth, Xi));
+
+	// read
+	happly::PLYData plyIn(path);
+	std::vector<std::array<double, 3>> vPos = plyIn.getVertexPositions();
+	std::vector<std::vector<size_t>> fInd = plyIn.getFaceIndices<size_t>();
+
+
+	// copy data
+	face.resize(fInd.size());
+	vert.resize(vPos.size());
+	
+	memcpy(&vert[0], &vPos[0], vPos.size() * 3 * sizeof(double));
+	for (size_t i = 0; i < fInd.size(); i++) {
+		face[i].x = fInd[i][0];
+		face[i].y = fInd[i][1];
+		face[i].z = fInd[i][2];
 	}
-	else if (obj.refl == SPEC)            // Ideal SPECULAR reflection 
-		return obj.e + f.mult(radiance(spheres, Ray(x, r.d - n * 2 * n.dot(r.d)), depth, Xi));
 
+	// compute normal
+	norms.resize(face.size());
+	
+	for (size_t i = 0; i < face.size(); i++) {
+		Point& p1 = vert[face[i].x];
+		Point& p2 = vert[face[i].y];
+		Point& p3 = vert[face[i].z];
 
-	Ray reflRay(x, r.d - n * 2 * n.dot(r.d));     // Ideal dielectric REFRACTION 
-	bool into = n.dot(nl) > 0;                // Ray from outside going in? 
-	double nc = 1, nt = 1.5, nnt = into ? nc / nt : nt / nc, ddn = r.d.dot(nl), cos2t;
-	if ((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0)    // Total internal reflection 
-		return obj.e + f.mult(radiance(spheres, reflRay, depth, Xi));
-	Vec tdir = (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
-	double a = nt - nc, b = nt + nc, R0 = a * a / (b * b), c = 1 - (into ? -ddn : tdir.dot(n));
-	double Re = R0 + (1 - R0) * c * c * c * c * c, Tr = 1 - Re, P = .25 + .5 * Re, RP = Re / P, TP = Tr / (1 - P);
-	return obj.e + f.mult(depth > 2 ? (erand48(Xi) < P ?   // Russian roulette 
-		radiance(spheres, reflRay, depth, Xi) * RP : radiance(spheres, Ray(x, tdir), depth, Xi) * TP) :
-		radiance(spheres, reflRay, depth, Xi) * Re + radiance(spheres, Ray(x, tdir), depth, Xi) * Tr);
+		norms[i] = (p2 - p1).OuterProd(p3 - p1).normalize();
+	}
 }
+
+// matrix
