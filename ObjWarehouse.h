@@ -3,121 +3,78 @@
 #include <ctime>
 #include <iostream>
 
+#include "RenderableObject.h"
+#include "LightLineSample.h"
+
+/*
+ 2020-5-28  改成Intersect只返回相交点的信息 不负责之后的采样等处理
+*/
+
 class ObjWarehouse
 {
 private:
 	std::vector<std::shared_ptr<RenderableObject const >> objList;
 public:
-	Color Intersect(const Ray& r, int depth)const {
-		
-
-		if (!r.Valid())
-			return Color(0.0, 0.0, 0.0);
+	std::shared_ptr<RenderableObject const> Intersect(const Ray& r, Vec3<double>& norm, Point& inscPoint)const {
 
 		double closestPoint = 0xFFFFF;
 		
+		Vec3<double> temp_norm;
 
-		std::shared_ptr<const RenderableObject> pClosestObject;
+		std::shared_ptr<RenderableObject const> pClosestObject;
 		for (auto it = objList.begin(); it != objList.end(); it++) {
 			
 			double t = 0xFFFFF;
-			bool intersected = (*it)->Intersect(r, t);
+
+			bool intersected = (*it)->Intersect(r, t, temp_norm);
 			
 			if (intersected && closestPoint > t) {
 				closestPoint = t;
 				pClosestObject = *it;
-				//std::cout << "find intersection" << std::endl;
+				norm = temp_norm;
 			}
 		}
-		int k;
 		if (closestPoint == 0xFFFFF){
-			/*std::cout << "depth is " << depth << std::endl;
-			std::cout << r.ori.x << " " << r.ori.y << " " << r.ori.z << std::endl;
-			std::cout << r.dir.x << " " << r.dir.y << " " << r.dir.z << std::endl;
-			std::cout << "no intersection" << std::endl;
-			std::cin >> k;*/
-			return Color(0.0,0.0,0.0);
-		}
-
-		//std::cout << "t is " << closestPoint << std::endl;
-
-		Color emission = pClosestObject->GetEmission();
-		
-
-
-		
-		//// medium
-		//double sigma_t = 0.3;
-		//double sigma_s = 0.2;
-		//double Te = exp(-sigma_t * closestPoint);
-
-
-		double p = 0.6;
-		double rnd = SampleRandomNum(0, 1);
-		if (rnd > p)
-			return emission;   // 终止trace
-
-		
-
-		// 采样光线
-		/*double samplePoint = 0xFFFFF;
-		while (samplePoint >= closestPoint) {
-			double xi = SampleRandomNum(0.0, 1.0);
-			samplePoint = -log(1 - xi) / sigma_t;
-		}*/
-		// 采样phase function
-		//Ray scatterRay(r.ori+samplePoint*r.dir, SampleScatterDir());
-		
-		/*double scatterP = 0.4;
-		rnd = SampleRandomNum(0, 1);
-		Color Ls = Color(0.0, 0.0, 0.0);
-		if (rnd < scatterP)
-			Ls = (1/scatterP)*sigma_s/sigma_t* Intersect(scatterRay,depth+1);*/
-		
-
-
-		Vec3<double> albedo = pClosestObject->GetAlbedo();
-
-
-
-		// estimator for sampling ray: g
-		// with probability p to trace, 1-p to cut off, g'=1/pg(x) p; 0 1-p
-		// E[g'] = 1/p g(x) * p + 0 = g(x)
-		albedo = (1/p)*albedo;  
-
-		MatType insecPointMat = pClosestObject->GetMat();
-
-		
-		Ray reflRay = pClosestObject->GetRefl(r, r.ori+ closestPoint * r.dir);
-		Ray refrRay = pClosestObject->GetRefr(r, r.ori + closestPoint * r.dir);
-
-		switch (insecPointMat) {
-		case MatType::Emission:
 			
-			return emission;
-			//return Te*emission + Ls;
-			break;
-		case MatType::Matt:
-			
-			//return Te*(emission + albedo * Intersect(reflRay, depth+1))+Ls;
-			return (emission + albedo * Intersect(reflRay, depth + 1));
-			break;
-		case MatType::Specular:
-			//return Te*(emission + albedo * Intersect(reflRay, depth + 1))+Ls;
-			return (emission + albedo * Intersect(reflRay, depth + 1));
-			break;
-		case MatType::Glass:
-
-			// 解frenel方程
-			double reflRatio = 0.5;
-			double refrRatio = 0.5;
-
-			//return Te * (emission + reflRatio * albedo * Intersect(reflRay, depth + 1) + refrRatio * albedo * Intersect(refrRay, depth + 1)) + Ls;
-			return (emission + reflRatio * albedo * Intersect(reflRay, depth + 1) + refrRatio * albedo * Intersect(refrRay, depth + 1));
+			return nullptr;
 		}
+		inscPoint = r.ori + closestPoint * r.dir;
 
+		return pClosestObject;
 		
 	}
+
+	// for shadow ray 
+	bool Intersect(const Ray& r, double& t)const {
+
+		double closestPoint = 0xFFFFF;
+
+
+		for (auto it = objList.begin(); it != objList.end(); it++) {
+
+
+			bool intersected = (*it)->Intersect(r, t);
+
+			if (intersected && closestPoint > t) {
+				closestPoint = t;
+			}
+		}
+		if (closestPoint == 0xFFFFF) {
+
+			return false;
+		}
+
+		t = closestPoint;
+
+		return true;
+
+	}
+
+	/*void VisibilityTest(const LightLineSample& lls, const Point& inscPoint, std::vector<Vec2<double>>& lineSegs) const {
+
+
+	}*/
+
 	void AddObject(std::shared_ptr<RenderableObject const> obj) {
 		objList.push_back(obj);
 	}

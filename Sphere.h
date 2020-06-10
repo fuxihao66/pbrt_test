@@ -12,9 +12,9 @@ public:
 	Sphere();
 	Sphere(double x, double y, double z, double r);
 
-	virtual const Vec3<double> GetNormal(const Vec3<double>& pos) const;
-	virtual bool Intersect(const Ray&, double&) const;
-	virtual bool Contain(const Vec3<double>& point)const;
+	//virtual const Vec3<double> GetNormal(const Vec3<double>& pos) const;
+	virtual bool Intersect(const Ray&, double&, Vec3<double>&) const;
+	//virtual bool Contain(const Vec3<double>& point)const;
 
 };
 

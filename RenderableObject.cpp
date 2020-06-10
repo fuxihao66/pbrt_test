@@ -8,22 +8,28 @@ RenderableObject::RenderableObject(std::shared_ptr<Material const> m, std::share
 	_mat = m;
 	_geo = g;
 }
-bool RenderableObject::Intersect(const Ray& r, double& t) const{
+bool RenderableObject::Intersect(const Ray& r, double& t, Vec3<double>& norm) const{
 	
-	return _geo->Intersect(r, t);
+	return _geo->Intersect(r, t, norm);
 }
 
-MatType RenderableObject::GetMat() const{
-	return _mat->GetMat();
+bool RenderableObject::Intersect(const Ray& r, double& t) const {
+	Vec3<double> norm;
+	return _geo->Intersect(r, t, norm);
 }
 
-Color RenderableObject::GetAlbedo() const{
-	return _mat->GetAlbedo();
-}
-
-Color RenderableObject::GetEmission() const {
-	return _mat->GetEmission();
-}
+//
+//MatType RenderableObject::GetMatType() const{
+//	return _mat->GetMatType();
+//}
+//
+//Color RenderableObject::GetAlbedo() const{
+//	return _mat->GetAlbedo();
+//}
+//
+//Color RenderableObject::GetEmission() const {
+//	return _mat->GetEmission();
+//}
 
 void RenderableObject::SetGeo(std::shared_ptr<Geometry const> g) {
 	_geo = g;
@@ -32,22 +38,19 @@ void RenderableObject::SetMat(std::shared_ptr<Material const> m) {
 	_mat = m;
 }
 
-Ray RenderableObject::GetRefl(const Ray& r, const Vec3<double>& pos) const{
-	// Ray non valid
-	Vec3<double> norm = _geo->GetNormal(pos);
+//Ray RenderableObject::GetRefl(const Ray& r, const Vec3<double>& pos, const Vec3<double>& normal, double& pdf) const{
+//
+//	return _mat->ReflImpSampling(r, pos, normal, pdf);
+//}
+//Ray RenderableObject::GetRefr(const Ray& r, const Vec3<double>& pos, const Vec3<double>& normal, double& pdf) const{
+//
+//	return _mat->RefrImpSampling(r, pos, normal, pdf);
+//	
+//}
 
-
-	return _mat->ReflImpSampling(r, pos, norm);
+std::shared_ptr<Material const> RenderableObject::GetMat() const {
+	return _mat;
 }
-Ray RenderableObject::GetRefr(const Ray& r, const Vec3<double>& pos) const{
-	// Ray non valid
-	Vec3<double> norm = _geo->GetNormal(pos);
-	bool inside = false;
-	if (_geo->Contain(r.ori)) {
-		inside = true;
-	}
-
-
-	return _mat->RefrImpSampling(r, pos, norm, inside);
-	
+std::shared_ptr<Geometry const> RenderableObject::GetGeo() const {
+	return _geo;
 }

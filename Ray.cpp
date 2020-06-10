@@ -5,6 +5,8 @@ Ray::Ray() {
 Ray::Ray(const Vec3<double>& _ori, const Vec3<double>& _dir) {
 	ori = _ori;
 	dir = _dir;
+	if (dir.length() > 1)
+		dir.normalize();
 	isValid = true;
 }
 

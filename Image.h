@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include "utility.h"
+#include "lodepng/lodepng.h"
+
 class Image
 {
 private:
